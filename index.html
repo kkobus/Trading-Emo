@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Emotion Graph with Euphoria Loop</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 20px;
+      background-color: #121212;
+      color: white;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #1e1e1e;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+    }
+    .tooltip {
+      font-size: 16px;
+      color: #00ffcc;
+      margin-bottom: 10px;
+      animation: blink 1.5s infinite;
+    }
+    @keyframes blink {
+      0% { opacity: 1; }
+      50% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
+    canvas {
+      width: 100%;
+      height: 400px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="tooltip">Press <strong>SPACEBAR</strong> to move the marker</div>
+    <h1>Emotion Over Time</h1>
+    <canvas id="emotionGraph"></canvas>
+  </div>
+
+  <script>
+    const ctx = document.getElementById('emotionGraph').getContext('2d');
+
+    const data = [
+      { time: 0, emotion: 'Disbelief', value: 1, sound: 'C2' },
+      { time: 1, emotion: 'Hope', value: 2, sound: 'D3' },
+      { time: 2, emotion: 'Optimism', value: 4, sound: 'E4' },
+      { time: 3, emotion: 'Belief', value: 6, sound: 'G4' },
+      { time: 4, emotion: 'Thrill', value: 8, sound: 'A4' },
+      { time: 5, emotion: 'Euphoria', value: 10, sound: 'C5' }, // Special Loop Trigger
+      { time: 6, emotion: 'Complacency', value: 7, sound: 'F4' },
+      { time: 7, emotion: 'Anxiety', value: 4, sound: 'B2' },
+      { time: 8, emotion: 'Denial', value: 2, sound: 'D2' },
+      { time: 9, emotion: 'Panic', value: 1, sound: 'G1' },
+      { time: 10, emotion: 'Capitulation', value: 0, sound: 'A1' },
+      { time: 11, emotion: 'Anger', value: 1, sound: 'C1' },
+      { time: 12, emotion: 'Depression', value: 0.5, sound: 'E1' },
+      { time: 13, emotion: 'Disbelief', value: 1, sound: 'C2' }
+    ];
+
+    const labels = data.map(point => point.emotion);
+    const values = data.map(point => point.value);
+
+    let markerIndex = 0;
+    let euphoriaLoop = null;
+
+    const chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Emotion Intensity',
+          data: values,
+          borderColor: '#00ffcc',
+          backgroundColor: 'rgba(0, 255, 204, 0.2)',
+          fill: true,
+          tension: 0.3,
+          pointRadius: 5,
+          pointBackgroundColor: '#00ffcc',
+          pointBorderColor: '#ffffff'
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          x: {
+            title: {
+              display: true,
+              text: 'Emotions',
+              color: '#ffffff'
+            },
+            ticks: {
+              color: '#ffffff',
+              autoSkip: false
+            }
+          },
+          y: {
+            title: {
+              display: true,
+              text: 'Intensity',
+              color: '#ffffff'
+            },
+            min: 0,
+            max: 10,
+            ticks: { color: '#ffffff' }
+          }
+        },
+        plugins: {
+          legend: {
+            display: false
+          },
+          annotation: {
+            annotations: {
+              marker: {
+                type: 'point',
+                xValue: markerIndex,
+                yValue: values[markerIndex],
+                radius: 7,
+                backgroundColor: '#ff0000',
+                borderColor: '#ffffff',
+                borderWidth: 2,
+                label: {
+                  content: labels[markerIndex],
+                  enabled: true,
+                  position: 'top',
+                  color: '#ff0000'
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    const synth = new Tone.Synth().toDestination();
+    const euphoriaSynth = new Tone.Synth({ oscillator: { type: 'sine' } }).toDestination();
+
+    function playSynth(note) {
+      synth.triggerAttackRelease(note, "8n");
+    }
+
+    function startEuphoriaLoop() {
+      if (!euphoriaLoop) {
+        euphoriaLoop = new Tone.Loop((time) => {
+          const sequence = ['C5', 'E5', 'G5', 'E5']; 
+          let noteIndex = (Math.floor(time * 4) % sequence.length);
+          euphoriaSynth.triggerAttackRelease(sequence[noteIndex], "8n", time);
+        }, "0.25s").start(0);
+        Tone.Transport.start();
+      }
+    }
+
+    function stopEuphoriaLoop() {
+      if (euphoriaLoop) {
+        euphoriaLoop.stop();
+        euphoriaLoop = null;
+      }
+    }
+
+    function moveMarker() {
+      markerIndex = (markerIndex + 1) % labels.length;
+      const emotionData = data[markerIndex];
+
+      chart.options.plugins.annotation.annotations.marker.xValue = markerIndex;
+      chart.options.plugins.annotation.annotations.marker.yValue = emotionData.value;
+      chart.options.plugins.annotation.annotations.marker.label.content = emotionData.emotion;
+      
+      chart.update();
+
+      if (emotionData.emotion === "Euphoria") {
+        startEuphoriaLoop();
+      } else {
+        stopEuphoriaLoop();
+        playSynth(emotionData.sound);
+      }
+    }
+
+    document.addEventListener('keydown', (event) => {
+      if (event.code === 'Space') {
+        event.preventDefault();
+        moveMarker();
+      }
+    });
+
+    chart.options.plugins.annotation.annotations.marker.xValue = markerIndex;
+    chart.options.plugins.annotation.annotations.marker.yValue = values[markerIndex];
+    chart.update();
+  </script>
+</body>
+</html>
