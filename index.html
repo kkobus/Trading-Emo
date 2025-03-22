@@ -43,7 +43,7 @@
 </head>
 <body>
   <div class="container">
-    <div class="tooltip">Press <strong>SPACEBAR</strong> to move the marker</div>
+    <div class="tooltip">Press <strong>SPACEBAR</strong> to move the marker | Press <strong>ENTER</strong> to replay the tone</div>
     <h1>Emotion Over Time</h1>
     <canvas id="emotionGraph"></canvas>
   </div>
@@ -189,6 +189,10 @@
       if (event.code === 'Space') {
         event.preventDefault();
         moveMarker();
+      } else if (event.code === 'Enter') {
+        event.preventDefault();
+        const emotionData = data[markerIndex];
+        playSynth(emotionData.sound);
       }
     });
 
